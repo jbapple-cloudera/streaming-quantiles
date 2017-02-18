@@ -14,22 +14,8 @@
 
 using namespace std;
 
-struct UrandomBool {
-  random_device dev_;
-  unsigned cache_;
-  int cache_size_;
-  explicit UrandomBool() : dev_(), cache_(0), cache_size_(0) {}
-  bool Bool() {
-    if (cache_size_ == 0) {
-      cache_ = dev_();
-      cache_size_ = CHAR_BIT * sizeof(cache_);
-    }
-    const bool result = cache_ & 1;
-    cache_ >>= 1;
-    --cache_size_;
-    return result;
-  }
-};
+#include "reservoir.hpp"
+#include "utility.hpp"
 
 template<typename T, uint32_t CAPACITY>
 struct Kll {
@@ -57,7 +43,9 @@ private:
       size_limits_.push_front(Round(size_limits_[0] * 2 / 3));
     }
     if (data_[level].size() >= size_limits_[level]) {
-      sort(data_[level].begin(), data_[level].end());
+      if (data_[level].size() > 2) {
+        sort(data_[level].begin(), data_[level].end());
+      }
       for (uint32_t i = rgen->Bool(); i < data_[level].size(); i += 2) {
         Insert(rgen, data_[level][i], level+1);
       }
@@ -94,6 +82,7 @@ private:
        seen += v.second;
        if (seen >= target) return v.first;
     }
+    __builtin_unreachable();
   }
 
   template <typename Random>
@@ -105,37 +94,15 @@ private:
       }
       ++level;
     }
+    size_ += that.size_;
   }
 };
 
 int main(int argc, char ** argv) {
   assert (argc == 2);
-  string word;
-  UrandomBool r;
-  unordered_map<string, pair<double, double>> index;
-  double total = 0;
-  {
-
-    ifstream dict(argv[1]);
-    unordered_map<string, double> accum;
-    while (dict >> word) {
-      ++accum[word];
-      ++total;
-    }
-    vector<pair<string, double>> sorted(accum.begin(), accum.end());
-    sort(sorted.begin(), sorted.end());
-    double running = 0;
-    for (const auto& v: sorted) {
-      auto next = running + v.second;
-      assert (next <= total);
-      index[v.first] = {running / total, next / total};
-      running = next;
-    }
-    cout << "TOTAL: " << total << endl;
-  }
-  Kll<string, 200> kll;
-  ifstream dict(argv[1]);
-  while (dict >> word) kll.Insert(&r, word, 0);
-  const auto result = kll.Percentile(0.5);
-  cout << result << ' ' << index[result].first << ' ' << index[result].second << endl;
+  // Quality<UrandomBool, Kll<string, 1000>, Reservoir<string, 20000>>(argv[1]);
+  // InteractiveTest<UrandomBool, Reservoir<string, 1000>>(argv[1]);
+  PrintTimer([&] { Benchmark<UrandomBool, Reservoir<string, 20000>>(argv[1]); return 0; });
+  PrintTimer([&] { Benchmark<UrandomBool, Kll<string, 1000>>(argv[1]); return 0; });
+  PrintTimer([&] { Benchmark<UrandomBool, Reservoir<string, 20000>>(argv[1]); return 0; });
 }
