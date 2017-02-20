@@ -123,17 +123,22 @@ Sketch ComputeSketch(const string& filename) {
   return sketch;
 }
 
-template<typename Random, typename Sketch>
+template<typename Random, typename Sketch1, typename Sketch2>
 void InteractiveTest(const string& filename) {
   cout.imbue(std::locale(""));
   cout << filename << endl;
   const auto index = PrintTimer([&] { return GroundTruth(filename); });
-  const Sketch kll = PrintTimer([&] { return ComputeSketch<Random, Sketch>(filename); });
+  const auto sketch1 = PrintTimer([&] { return ComputeSketch<Random, Sketch1>(filename); });
+  const auto sketch2 = PrintTimer([&] { return ComputeSketch<Random, Sketch2>(filename); });
   double p;
   cout.precision(4);
   while (cin >> p) {
-    const auto result = kll.Percentile(p / 100);
-    const auto truth = index.find(result)->second;
+    auto result = sketch1.Percentile(p / 100);
+    auto truth = index.find(result)->second;
+    cout << 100 * truth.first << ' ' << 100 * truth.second;
+    cout << ' ' << result << endl;
+    result = sketch2.Percentile(p / 100);
+    truth = index.find(result)->second;
     cout << 100 * truth.first << ' ' << 100 * truth.second;
     cout << ' ' << result << endl;
   }
@@ -145,7 +150,13 @@ void Benchmark(const string& filename) {
   Sketch sketch;
   string word;
   Random r;
-  while (file >> word) sketch.Insert(&r, word, 0);
+  //uint64_t count = 0;
+  while (file >> word) {
+    sketch.Insert(&r, word, 0);
+    //++count;
+    //assert(count == sketch.InferredSize());
+  }
+  //cout << count << ' ' << sketch.InferredSize() << endl;
 }
 
 template<typename Random, typename Sketch>
@@ -163,7 +174,9 @@ string Middle(const vector<string>& keys) {
   Sketch sketch;
   Random r;
   for (const auto& key : keys) sketch.Insert(&r, key, 0);
-  return sketch.Percentile(0.5);
+  const auto result = sketch.Percentile(0.5);
+  //cout << result << ' ';
+  return result;
 }
 
 double Error(const pair<double,double>& range) {
@@ -192,6 +205,7 @@ void Quality(const string& filename) {
   array<double, sizeof...(Sketches)> errors;
   for (uint64_t count = 1; true; ++count) {
     estimates = {Middle<Random, Sketches>(keys)...};
+    //cout << endl;
     transform(estimates.begin(), estimates.end(), errors.begin(), [&](const auto& s) {
       return Error(index.find(s)->second);
     });
@@ -217,4 +231,23 @@ void Quality(const string& filename) {
     }
   }
 
+}
+
+template <typename T>
+T FindPercentile(vector<pair<T, uint64_t>> keys, double p) {
+  assert(0 <= p && p <= 1);
+  sort(keys.begin(), keys.end());
+
+  double target = 0;
+  for (const auto& v : keys) target += v.second;
+  target *= p;
+
+  uint64_t seen = 0;
+  //cout << keys.size() << ' ' << p << endl;
+  for (const auto& v : keys) {
+    seen += v.second;
+    //cout << v.first << ' ' << v.second << endl;
+    if (seen >= target) return v.first;
+  }
+  __builtin_unreachable();
 }
