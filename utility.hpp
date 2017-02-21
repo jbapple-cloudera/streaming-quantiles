@@ -35,8 +35,8 @@ auto PrintTimerWithClock(const F& f) {
   const auto finish = Clock::now();
   const auto delta = finish - start;
   std::cout.imbue(std::locale(""));
-  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() << " milliseconds"
-       << std::endl;
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(delta).count()
+            << " milliseconds" << std::endl;
   return result;
 }
 
@@ -49,13 +49,14 @@ auto PrintTimer(const F& f) {
   }
 }
 
-auto GroundTruth(const std::vector<std::string>& keys) {
-  std::unordered_map<std::string, std::pair<double, double>> index;
+template<typename T>
+auto GroundTruth(const std::vector<T>& keys) {
+  std::unordered_map<T, std::pair<double, double>> index;
   const double total = keys.size();
-  std::unordered_map<std::string, double> accum;
+  std::unordered_map<T, double> accum;
   for (const auto& key : keys) ++accum[key];
 
-  std::vector<std::pair<std::string, double>> sorted(accum.begin(), accum.end());
+  std::vector<std::pair<T, double>> sorted(accum.begin(), accum.end());
   sort(sorted.begin(), sorted.end());
   double running = 0;
   for (const auto& v : sorted) {
@@ -66,7 +67,7 @@ auto GroundTruth(const std::vector<std::string>& keys) {
   }
   std::cout.imbue(std::locale(""));
   std::cout << "TOTAL KEYS: " << static_cast<uintmax_t>(total) << std::endl
-       << "UNIQUE KEYS: " << index.size() << std::endl;
+            << "UNIQUE KEYS: " << index.size() << std::endl;
   return index;
 }
 
@@ -92,26 +93,27 @@ Sketch ComputeSketch(const std::string& filename) {
   return sketch;
 }
 
-template<typename Random, typename Sketch1, typename Sketch2>
+template<typename Random, typename... Sketches>
 void InteractiveTest(const std::string& filename) {
   std::cout.imbue(std::locale(""));
   std::cout << filename << std::endl;
   const auto index = PrintTimer([&] { return GroundTruth(filename); });
-  const auto sketch1 = PrintTimer([&] { return ComputeSketch<Random, Sketch1>(filename); });
-  const auto sketch2 = PrintTimer([&] { return ComputeSketch<Random, Sketch2>(filename); });
+  const auto sketches = std::make_tuple(ComputeSketch<Random, Sketches>(filename)...);
   double p;
   std::cout.precision(4);
+  std::array<std::pair<double, double>, sizeof...(Sketches)> truths;
   while (std::cin >> p) {
-    auto result = sketch1.Percentile(p / 100);
-    auto truth = index.find(result)->second;
-    std::cout << 100 * truth.first << ' ' << 100 * truth.second;
-    std::cout << ' ' << result << std::endl;
-    result = sketch2.Percentile(p / 100);
-    truth = index.find(result)->second;
-    std::cout << 100 * truth.first << ' ' << 100 * truth.second;
-    std::cout << ' ' << result << std::endl;
+    const std::array<std::string, sizeof...(Sketches)> results = {
+        std::get<Sketches>(sketches).Percentile(p / 100)...};
+    std::transform(results.begin(), results.end(), truths.begin(),
+        [&](const std::string& result) { return index.find(result)->second; });
+    for (int i = 0; i < sizeof...(Sketches); ++i) {
+      std::cout << 100 * truths[i].first << ' ' << 100 * truths[i].second;
+      std::cout << ' ' << results[i] << std::endl;
+    }
   }
 }
+
 
 template<typename Random, typename Sketch>
 void Benchmark(const std::string& filename) {
