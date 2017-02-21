@@ -29,74 +29,61 @@
 
 #include "utility.hpp"
 
-class KllArrayDetails {
-  template <typename T>
-  static constexpr T Round(T x) {
-    return (4 < (2 * (x / 2))) ? (2 * (x / 2)) : 4;
-  }
-
-  static constexpr int16_t KllHeight(int32_t capacity, int16_t accum = 0) {
-    return (capacity < 4) ? accum : KllHeight(capacity - Round(capacity / 3), accum + 1);
-  }
-
-  // static_assert(KllHeight(numeric_limits<int32_t>::max(), 0) == 50,
-  //  "KllHeight different than expected");
-
-  static constexpr int16_t KllHeightNth(int32_t capacity, int16_t n) {
-    return (n + 1 == KllHeight(capacity)) ?
-        (capacity - Round(capacity / 3)) :
-        KllHeightNth(capacity - Round(capacity / 3), n);
-  }
-
-  template <int32_t CAPACITY, bool TIGHT_FIT>
-  struct KllArrayVal;
-
-  template <int32_t CAPACITY>
-  struct KllArrayVal<CAPACITY, true> {
-    template <int16_t... INDEXES>
-    static constexpr auto KllArrayMake(std::integer_sequence<int16_t, INDEXES...>) {
-      return std::array<int32_t, KllHeight(CAPACITY - 1) + 1>{
-          1 + KllHeightNth(CAPACITY - 1, INDEXES)..., CAPACITY};
-    }
-  };
-
-  template <int32_t CAPACITY>
-  struct KllArrayVal<CAPACITY, false> {
-    template <int16_t... INDEXES>
-    static constexpr auto KllArrayMake(std::integer_sequence<int16_t, INDEXES...>) {
-      return std::array<int32_t, KllHeight(CAPACITY) + 1>{
-          KllHeightNth(CAPACITY, INDEXES)..., CAPACITY};
-    }
-  };
-
-  static constexpr int16_t KllTightFit(int32_t capacity) {
-    return (capacity < 4) ? (0 == capacity) : KllTightFit(capacity - Round(capacity / 3));
-  }
-
- public:
-  template <int32_t CAPACITY>
-  static constexpr auto KllArray() {
-    return KllArrayVal<CAPACITY, KllTightFit(CAPACITY)>::KllArrayMake(
-        std::make_integer_sequence<int16_t,
-            KllHeight(CAPACITY - KllTightFit(CAPACITY))>());
-  }
-};
-
-template <int32_t CAPACITY>
-using KllArrayType = decltype(KllArrayDetails::KllArray<CAPACITY>());
-
-template <int32_t CAPACITY>
-void PrintKllArray() {
-  const auto f = KllArrayDetails::KllArray<CAPACITY>();
-  for (auto v : f) std::cout << v << std::endl;
-  std::cout << "--\n";
-}
+// template <int32_t CAPACITY>
+// void PrintKllArray() {
+//   const auto f = KllArrayDetails::KllArray<CAPACITY>();
+//   for (auto v : f) std::cout << v << std::endl;
+//   std::cout << "--\n";
+// }
 
 template <typename T, int32_t CAPACITY>
 struct SampledKll {
  private:
-  static constexpr KllArrayType<CAPACITY> LEVEL_START =
-      KllArrayDetails::KllArray<CAPACITY>();
+  class KllArrayDetails {
+    template <typename Int>
+    static constexpr Int Round(Int x) {
+      return (4 < (2 * (x / 2))) ? (2 * (x / 2)) : 4;
+    }
+
+    static constexpr int16_t KllHeight(int32_t capacity) {
+      return (capacity < 4) ? 0 : (1 + KllHeight(capacity - Round(capacity / 3)));
+    }
+
+    // static_assert(KllHeight(numeric_limits<int32_t>::max(), 0) == 50,
+    //  "KllHeight different than expected");
+
+    static constexpr int16_t KllHeightNth(int32_t capacity, int16_t n) {
+      return (n + 1 == KllHeight(capacity)) ?
+          (capacity - Round(capacity / 3)) :
+          KllHeightNth(capacity - Round(capacity / 3), n);
+    }
+
+    template <bool TIGHT_FIT>
+    using KllArrayType =
+        std::array<int32_t, KllArrayDetails::KllHeight(CAPACITY - TIGHT_FIT) + 1>;
+
+    template <bool TIGHT_FIT, int16_t... INDEXES>
+    static constexpr KllArrayType<TIGHT_FIT> KllArrayMake(
+        std::integer_sequence<int16_t, INDEXES...>) {
+      return std::array<int32_t, KllHeight(CAPACITY - TIGHT_FIT) + 1>{
+          TIGHT_FIT + KllHeightNth(CAPACITY - 1, INDEXES)..., CAPACITY};
+    }
+
+    static constexpr int16_t KllTightFit(int32_t capacity) {
+      return (capacity < 4) ? (0 == capacity) :
+                              KllTightFit(capacity - Round(capacity / 3));
+    }
+
+   public:
+    static constexpr auto KllArray() {
+      return KllArrayMake<KllTightFit(CAPACITY)>(std::make_integer_sequence<int16_t,
+          KllHeight(CAPACITY - KllTightFit(CAPACITY))>());
+    }
+  };
+
+  using KllArrayType = decltype(KllArrayDetails::KllArray());
+
+  static constexpr KllArrayType LEVEL_START = KllArrayDetails::KllArray();
   std::array<T, CAPACITY> data_{};
   std::array<int32_t, LEVEL_START.size() - 1> level_sizes_{};
   int64_t sample_weight_ = 0;
@@ -264,4 +251,5 @@ struct SampledKll {
 };
 
 template <typename T, int32_t CAPACITY>
-constexpr KllArrayType<CAPACITY> SampledKll<T, CAPACITY>::LEVEL_START;
+constexpr
+    typename SampledKll<T, CAPACITY>::KllArrayType SampledKll<T, CAPACITY>::LEVEL_START;
