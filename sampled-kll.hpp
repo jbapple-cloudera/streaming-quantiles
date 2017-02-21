@@ -1,17 +1,29 @@
 #pragma once
 
+/// A version of the KLL mergable streaming quantiles.
+///
+/// The class SampledKll<T, N> stores at most N values of type T in a sketch that can
+/// answer quantile questions such as "how many stream values are greater than v". Two
+/// factors are used when discussing the accuracy of the benchmarks:
+///
+///  1. ε, the approximation ratio. The returned answer may be off by 100*ε percentile.
+///  2. δ, the failure rate. With probability δ, the answer returned is off by more than
+///     ε.
+///
+/// The sketch in this file uses the KLL datastructure with the sampler but without the
+/// MRL or GK sketch on top. Its space usage (N) is -\sqrt{ln δ}/ε to answer a single
+/// quantile or -\sqrt{ln δε}/ε to answer all quantile queries correctly.
+///
+/// This sketch supports three operations: Insert(T), CDF(), and Merge(SampledKll).
+
 #include <algorithm>
 #include <bitset>
 #include <cassert>
 #include <climits>
 #include <cstdint>
-#include <deque>
-#include <fstream>
 #include <iostream>
-#include <memory>
+#include <limits>
 #include <random>
-#include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -19,17 +31,20 @@
 
 using namespace std;
 
-namespace KllArrayDetails {
+class KllArrayDetails {
 template<typename T>
-constexpr T Round(T x) {
+static constexpr T Round(T x) {
   return (4 < (2 * (x / 2))) ? (2 * (x / 2)) : 4;
 }
 
-constexpr int16_t KllHeight(int32_t capacity, int16_t accum = 0) {
+static constexpr int16_t KllHeight(int32_t capacity, int16_t accum = 0) {
   return (capacity < 4) ? accum : KllHeight(capacity - Round(capacity/3), accum+1);
 }
 
-constexpr int16_t KllHeightNth(int32_t capacity, int16_t n) {
+  //static_assert(KllHeight(numeric_limits<int32_t>::max(), 0) == 50,
+  //  "KllHeight different than expected");
+
+static constexpr int16_t KllHeightNth(int32_t capacity, int16_t n) {
   return (n + 1 == KllHeight(capacity)) ?
       (capacity - Round(capacity / 3)) :
       KllHeightNth(capacity - Round(capacity / 3), n);
@@ -39,7 +54,7 @@ template<int32_t CAPACITY, bool TIGHT_FIT>
 struct KllArrayVal;
 
 template<int32_t CAPACITY>
-struct KllArrayVal<CAPACITY, true> {
+ struct KllArrayVal<CAPACITY, true> {
   template <int16_t... INDEXES>
   static constexpr auto KllArrayMake(integer_sequence<int16_t, INDEXES...>) {
     return array<int32_t, KllHeight(CAPACITY-1) + 1>{
@@ -56,21 +71,24 @@ struct KllArrayVal<CAPACITY, false> {
   }
 };
 
-constexpr int16_t KllTightFit(int32_t capacity) {
+static constexpr int16_t KllTightFit(int32_t capacity) {
   return (capacity < 4) ? (0 == capacity) : KllTightFit(capacity - Round(capacity/3));
 }
-}
+public:
 
 template<int32_t CAPACITY>
-constexpr auto KllArray() {
-  using namespace KllArrayDetails;
+static constexpr auto KllArray() {
   return KllArrayVal<CAPACITY, KllTightFit(CAPACITY)>::KllArrayMake(
       make_integer_sequence<int16_t, KllHeight(CAPACITY - KllTightFit(CAPACITY))>());
 }
+};
+
+template<int32_t CAPACITY>
+using KllArrayType = decltype(KllArrayDetails::KllArray<CAPACITY>());
 
 template<int32_t CAPACITY>
 void PrintKllArray() {
-  const auto f = KllArray<CAPACITY>();
+  const auto f = KllArrayDetails::KllArray<CAPACITY>();
   for (auto v : f) cout << v << endl;
   cout << "--\n";
 }
@@ -78,7 +96,8 @@ void PrintKllArray() {
 template<typename T, int32_t CAPACITY>
 struct SampledKll {
  private:
-  static constexpr decltype(KllArray<CAPACITY>()) LEVEL_START = KllArray<CAPACITY>();
+  static constexpr KllArrayType<CAPACITY> LEVEL_START =
+      KllArrayDetails::KllArray<CAPACITY>();
   array<T, CAPACITY> data_{};
   array<int32_t, LEVEL_START.size() - 1> level_sizes_{};
   int64_t sample_weight_ = 0;
@@ -105,7 +124,6 @@ struct SampledKll {
     const auto f = Flatten();
     return FindPercentile(f, p);
   }
-
 
   // private:
   template <typename Random>
@@ -247,4 +265,4 @@ struct SampledKll {
 };
 
 template <typename T, int32_t CAPACITY>
-constexpr decltype(KllArray<CAPACITY>()) SampledKll<T, CAPACITY>::LEVEL_START;
+constexpr KllArrayType<CAPACITY> SampledKll<T, CAPACITY>::LEVEL_START;
