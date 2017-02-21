@@ -67,7 +67,8 @@ private:
       if (data_[level].size() > 2) {
         sort(data_[level].begin(), data_[level].end());
       }
-      for (uint32_t i = rgen->Bool(); i < data_[level].size(); i += 2) {
+      std::uniform_int_distribution<uint32_t> dist(0,1);
+      for (uint32_t i = dist(*rgen); i < data_[level].size(); i += 2) {
         Insert(rgen, data_[level][i], level+1);
       }
       data_[level].clear();

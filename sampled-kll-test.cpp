@@ -7,6 +7,6 @@ int main(int argc, char** argv) {
   assert(argc == 2);
   //Benchmark<UrandomBool, SampledKll<string, 200>>(argv[1]);
   //Benchmark<UrandomBool, Kll<string, 1000>>(argv[1]);
-  InteractiveTest<UrandomBool, SampledKll<string, 200>, SampledKll<string, 1000>>(
+  InteractiveTest<random_device, Kll<string, 1024>, SampledKll<string, 1024>>(
       argv[1]);
 }

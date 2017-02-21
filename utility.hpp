@@ -28,35 +28,6 @@
 #define __builtin_unreachable()
 #endif
 
-struct UrandomBool {
-  using result_type = unsigned;
-  static constexpr result_type min() { return 0; };
-  static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
-  result_type operator()() { return dev_(); }
-  std::random_device dev_;
-  unsigned cache_;
-  int cache_size_;
-  explicit UrandomBool() : dev_(), cache_(0), cache_size_(0) {}
-  bool Bool() {
-    if (cache_size_ == 0) {
-      cache_ = dev_();
-      cache_size_ = CHAR_BIT * sizeof(cache_);
-    }
-    const bool result = cache_ & 1;
-    cache_ >>= 1;
-    --cache_size_;
-    return result;
-  }
-};
-
-struct StupidBool {
-  bool result = true;
-  bool Bool() {
-    result = !result;
-    return result;
-  }
-};
-
 template<typename Clock, typename F>
 auto PrintTimerWithClock(const F& f) {
   const auto start = Clock::now();
