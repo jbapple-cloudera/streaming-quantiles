@@ -20,8 +20,6 @@
 #include <utility>
 #include <vector>
 
-using namespace std;
-
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
@@ -33,9 +31,9 @@ using namespace std;
 struct UrandomBool {
   using result_type = unsigned;
   static constexpr result_type min() { return 0; };
-  static constexpr result_type max() { return numeric_limits<result_type>::max(); }
+  static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
   result_type operator()() { return dev_(); }
-  random_device dev_;
+  std::random_device dev_;
   unsigned cache_;
   int cache_size_;
   explicit UrandomBool() : dev_(), cache_(0), cache_size_(0) {}
@@ -65,28 +63,28 @@ auto PrintTimerWithClock(const F& f) {
   const auto result = f();
   const auto finish = Clock::now();
   const auto delta = finish - start;
-  cout.imbue(std::locale(""));
-  cout << chrono::duration_cast<chrono::milliseconds>(delta).count() << " milliseconds"
-       << endl;
+  std::cout.imbue(std::locale(""));
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() << " milliseconds"
+       << std::endl;
   return result;
 }
 
 template<typename F>
 auto PrintTimer(const F& f) {
-  if (chrono::high_resolution_clock::is_steady) {
-    return PrintTimerWithClock<chrono::high_resolution_clock>(f);
+  if (std::chrono::high_resolution_clock::is_steady) {
+    return PrintTimerWithClock<std::chrono::high_resolution_clock>(f);
   } else {
-    return PrintTimerWithClock<chrono::steady_clock>(f);
+    return PrintTimerWithClock<std::chrono::steady_clock>(f);
   }
 }
 
-auto GroundTruth(const vector<string>& keys) {
-  unordered_map<string, pair<double, double>> index;
+auto GroundTruth(const std::vector<std::string>& keys) {
+  std::unordered_map<std::string, std::pair<double, double>> index;
   const double total = keys.size();
-  unordered_map<string, double> accum;
+  std::unordered_map<std::string, double> accum;
   for (const auto& key : keys) ++accum[key];
 
-  vector<pair<string, double>> sorted(accum.begin(), accum.end());
+  std::vector<std::pair<std::string, double>> sorted(accum.begin(), accum.end());
   sort(sorted.begin(), sorted.end());
   double running = 0;
   for (const auto& v : sorted) {
@@ -95,16 +93,16 @@ auto GroundTruth(const vector<string>& keys) {
     index[v.first] = {running / total, next / total};
     running = next;
   }
-  cout.imbue(std::locale(""));
-  cout << "TOTAL KEYS: " << static_cast<uintmax_t>(total) << endl
-       << "UNIQUE KEYS: " << index.size() << endl;
+  std::cout.imbue(std::locale(""));
+  std::cout << "TOTAL KEYS: " << static_cast<uintmax_t>(total) << std::endl
+       << "UNIQUE KEYS: " << index.size() << std::endl;
   return index;
 }
 
-auto GroundTruth(const string& filename) {
-  vector<string> keys;
-  string word;
-  ifstream dict(filename);
+auto GroundTruth(const std::string& filename) {
+  std::vector<std::string> keys;
+  std::string word;
+  std::ifstream dict(filename);
   while (dict >> word) {
     keys.push_back(word);
   }
@@ -112,43 +110,43 @@ auto GroundTruth(const string& filename) {
 }
 
 template <typename Random, typename Sketch>
-Sketch ComputeSketch(const string& filename) {
+Sketch ComputeSketch(const std::string& filename) {
   Sketch sketch;
-  ifstream dict(filename);
+  std::ifstream dict(filename);
   Random r;
-  string word;
-  cout << "COMPUTING SKETCH" << endl;
+  std::string word;
+  std::cout << "COMPUTING SKETCH" << std::endl;
   while (dict >> word) sketch.Insert(&r, word, 0);
-  cout << "SKETCH COMPUTED" << endl;
+  std::cout << "SKETCH COMPUTED" << std::endl;
   return sketch;
 }
 
 template<typename Random, typename Sketch1, typename Sketch2>
-void InteractiveTest(const string& filename) {
-  cout.imbue(std::locale(""));
-  cout << filename << endl;
+void InteractiveTest(const std::string& filename) {
+  std::cout.imbue(std::locale(""));
+  std::cout << filename << std::endl;
   const auto index = PrintTimer([&] { return GroundTruth(filename); });
   const auto sketch1 = PrintTimer([&] { return ComputeSketch<Random, Sketch1>(filename); });
   const auto sketch2 = PrintTimer([&] { return ComputeSketch<Random, Sketch2>(filename); });
   double p;
-  cout.precision(4);
-  while (cin >> p) {
+  std::cout.precision(4);
+  while (std::cin >> p) {
     auto result = sketch1.Percentile(p / 100);
     auto truth = index.find(result)->second;
-    cout << 100 * truth.first << ' ' << 100 * truth.second;
-    cout << ' ' << result << endl;
+    std::cout << 100 * truth.first << ' ' << 100 * truth.second;
+    std::cout << ' ' << result << std::endl;
     result = sketch2.Percentile(p / 100);
     truth = index.find(result)->second;
-    cout << 100 * truth.first << ' ' << 100 * truth.second;
-    cout << ' ' << result << endl;
+    std::cout << 100 * truth.first << ' ' << 100 * truth.second;
+    std::cout << ' ' << result << std::endl;
   }
 }
 
 template<typename Random, typename Sketch>
-void Benchmark(const string& filename) {
-  ifstream file(filename);
+void Benchmark(const std::string& filename) {
+  std::ifstream file(filename);
   Sketch sketch;
-  string word;
+  std::string word;
   Random r;
   //uint64_t count = 0;
   while (file >> word) {
@@ -156,85 +154,85 @@ void Benchmark(const string& filename) {
     //++count;
     //assert(count == sketch.InferredSize());
   }
-  //cout << count << ' ' << sketch.InferredSize() << endl;
+  //std::cout << count << ' ' << sketch.InferredSize() << std::endl;
 }
 
 template<typename Random, typename Sketch>
-string Middle(const string& filename) {
-  ifstream file(filename);
+std::string Middle(const std::string& filename) {
+  std::ifstream file(filename);
   Sketch sketch;
-  string word;
+  std::string word;
   Random r;
   while (file >> word) sketch.Insert(&r, word, 0);
   return sketch.Percentile(0.5);
 }
 
 template <typename Random, typename Sketch>
-string Middle(const vector<string>& keys) {
+std::string Middle(const std::vector<std::string>& keys) {
   Sketch sketch;
   Random r;
   for (const auto& key : keys) sketch.Insert(&r, key, 0);
   const auto result = sketch.Percentile(0.5);
-  //cout << result << ' ';
+  //std::cout << result << ' ';
   return result;
 }
 
-double Error(const pair<double,double>& range) {
+double Error(const std::pair<double,double>& range) {
   const auto //
-      lo = max(0.0, range.first - 0.5), //
-      hi = max(0.0, 0.5 - range.second);
+      lo = std::max(0.0, range.first - 0.5), //
+      hi = std::max(0.0, 0.5 - range.second);
   assert(lo >= 0);
   assert(hi >= 0);
-  return max(lo, hi);
+  return std::max(lo, hi);
 }
 
 template <typename Random, typename... Sketches>
-void Quality(const string& filename) {
-  vector<string> keys;
+void Quality(const std::string& filename) {
+  std::vector<std::string> keys;
   {
-    string word;
-    ifstream file(filename);
+    std::string word;
+    std::ifstream file(filename);
     while (file >> word) keys.push_back(word);
   }
 
   const auto index = PrintTimer([&] { return GroundTruth(keys); });
   uint64_t count = 0;
-  array<double, sizeof...(Sketches)> sum_abs_error{}, max_error{}, sum_sqr_error{};
-  array<string, sizeof...(Sketches)> estimates;
-  array<pair<double, double>, sizeof...(Sketches)> truths;
-  array<double, sizeof...(Sketches)> errors;
+  std::array<double, sizeof...(Sketches)> sum_abs_error{}, max_error{}, sum_sqr_error{};
+  std::array<std::string, sizeof...(Sketches)> estimates;
+  std::array<std::pair<double, double>, sizeof...(Sketches)> truths;
+  std::array<double, sizeof...(Sketches)> errors;
   for (uint64_t count = 1; true; ++count) {
     estimates = {Middle<Random, Sketches>(keys)...};
-    //cout << endl;
-    transform(estimates.begin(), estimates.end(), errors.begin(), [&](const auto& s) {
+    //std::cout << std::endl;
+    std::transform(estimates.begin(), estimates.end(), errors.begin(), [&](const auto& s) {
       return Error(index.find(s)->second);
     });
 
-    transform(errors.begin(), errors.end(), sum_abs_error.begin(),
-              sum_abs_error.begin(), plus<>());
+    std::transform(errors.begin(), errors.end(), sum_abs_error.begin(),
+              sum_abs_error.begin(), std::plus<>());
     /*
-    transform(errors.begin(), errors.end(), sum_sqr_error.begin(), sum_sqr_error.begin(),
+    std::transform(errors.begin(), errors.end(), sum_sqr_error.begin(), sum_sqr_error.begin(),
         [](double err, double sum) { return err * err + sum; });
     */
-    transform(errors.begin(), errors.end(), max_error.begin(), max_error.begin(),
-        [](double err, double big) { return max(err, big); });
+    std::transform(errors.begin(), errors.end(), max_error.begin(), max_error.begin(),
+        [](double err, double big) { return std::max(err, big); });
     if (static_cast<uint64_t>(sqrt(count)) * static_cast<uint64_t>(sqrt(count))
         == count) {
-      cout.precision(4);
-      cout << fixed;
-      cout << setw(6) << count;
-      for (auto v : sum_abs_error) cout << setw(8) << 100 * v / count;
-      cout << endl << setw(6) << "max";
-      for (auto v : max_error) cout << setw(8) << 100 * v;
-      // for (auto v : sum_sqr_error) cout << 100 * sqrt(v / count) << ' ';
-      cout << endl;
+      std::cout.precision(4);
+      std::cout << std::fixed;
+      std::cout << std::setw(6) << count;
+      for (auto v : sum_abs_error) std::cout << std::setw(8) << 100 * v / count;
+      std::cout << std::endl << std::setw(6) << "max";
+      for (auto v : max_error) std::cout << std::setw(8) << 100 * v;
+      // for (auto v : sum_sqr_error) std::cout << 100 * sqrt(v / count) << ' ';
+      std::cout << std::endl;
     }
   }
 
 }
 
 template <typename T>
-T FindPercentile(vector<pair<T, uint64_t>> keys, double p) {
+T FindPercentile(std::vector<std::pair<T, uint64_t>> keys, double p) {
   assert(0 <= p && p <= 1);
   sort(keys.begin(), keys.end());
 
@@ -243,10 +241,10 @@ T FindPercentile(vector<pair<T, uint64_t>> keys, double p) {
   target *= p;
 
   uint64_t seen = 0;
-  //cout << keys.size() << ' ' << p << endl;
+  //std::cout << keys.size() << ' ' << p << std::endl;
   for (const auto& v : keys) {
     seen += v.second;
-    //cout << v.first << ' ' << v.second << endl;
+    //std::cout << v.first << ' ' << v.second << std::endl;
     if (seen >= target) return v.first;
   }
   __builtin_unreachable();

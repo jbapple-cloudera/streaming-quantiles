@@ -29,8 +29,6 @@
 
 #include "utility.hpp"
 
-using namespace std;
-
 class KllArrayDetails {
 template<typename T>
 static constexpr T Round(T x) {
@@ -56,8 +54,8 @@ struct KllArrayVal;
 template<int32_t CAPACITY>
  struct KllArrayVal<CAPACITY, true> {
   template <int16_t... INDEXES>
-  static constexpr auto KllArrayMake(integer_sequence<int16_t, INDEXES...>) {
-    return array<int32_t, KllHeight(CAPACITY-1) + 1>{
+  static constexpr auto KllArrayMake(std::integer_sequence<int16_t, INDEXES...>) {
+    return std::array<int32_t, KllHeight(CAPACITY-1) + 1>{
         1+KllHeightNth(CAPACITY-1, INDEXES)..., CAPACITY};
   }
 };
@@ -65,8 +63,8 @@ template<int32_t CAPACITY>
 template <int32_t CAPACITY>
 struct KllArrayVal<CAPACITY, false> {
   template <int16_t... INDEXES>
-  static constexpr auto KllArrayMake(integer_sequence<int16_t, INDEXES...>) {
-    return array<int32_t, KllHeight(CAPACITY) + 1>{
+  static constexpr auto KllArrayMake(std::integer_sequence<int16_t, INDEXES...>) {
+    return std::array<int32_t, KllHeight(CAPACITY) + 1>{
         KllHeightNth(CAPACITY, INDEXES)..., CAPACITY};
   }
 };
@@ -79,7 +77,7 @@ public:
 template<int32_t CAPACITY>
 static constexpr auto KllArray() {
   return KllArrayVal<CAPACITY, KllTightFit(CAPACITY)>::KllArrayMake(
-      make_integer_sequence<int16_t, KllHeight(CAPACITY - KllTightFit(CAPACITY))>());
+      std::make_integer_sequence<int16_t, KllHeight(CAPACITY - KllTightFit(CAPACITY))>());
 }
 };
 
@@ -89,8 +87,8 @@ using KllArrayType = decltype(KllArrayDetails::KllArray<CAPACITY>());
 template<int32_t CAPACITY>
 void PrintKllArray() {
   const auto f = KllArrayDetails::KllArray<CAPACITY>();
-  for (auto v : f) cout << v << endl;
-  cout << "--\n";
+  for (auto v : f) std::cout << v << std::endl;
+  std::cout << "--\n";
 }
 
 template<typename T, int32_t CAPACITY>
@@ -98,19 +96,20 @@ struct SampledKll {
  private:
   static constexpr KllArrayType<CAPACITY> LEVEL_START =
       KllArrayDetails::KllArray<CAPACITY>();
-  array<T, CAPACITY> data_{};
-  array<int32_t, LEVEL_START.size() - 1> level_sizes_{};
+  std::array<T, CAPACITY> data_{};
+  std::array<int32_t, LEVEL_START.size() - 1> level_sizes_{};
   int64_t sample_weight_ = 0;
-  bitset<LEVEL_START.size() - 1> heavies_ = 0;
+  std::bitset<LEVEL_START.size() - 1> heavies_ = 0;
   int16_t sample_height_ = 1 - level_sizes_.size();
 
   private:
 
-  vector<pair<T, uint64_t>> Flatten() const {
-    vector<pair<T, uint64_t>> result;
+  std::vector<std::pair<T, uint64_t>> Flatten() const {
+    std::vector<std::pair<T, uint64_t>> result;
     if (sample_weight_) result.push_back({data_[0], sample_weight_});
-    int64_t weight = 1ll << max(0, +sample_height_);
-    for (int16_t level = max(0, -sample_height_); level < level_sizes_.size(); ++level) {
+    int64_t weight = 1ll << std::max(0, +sample_height_);
+    for (int16_t level = std::max(0, -sample_height_); level < level_sizes_.size();
+         ++level) {
       for (int32_t i = 0; i < level_sizes_[level]; ++i) {
         result.push_back({data_[LEVEL_START[level] + i], weight});
       }
@@ -128,10 +127,10 @@ struct SampledKll {
   // private:
   template <typename Random>
   void Compress(Random* rgen, int16_t level, int32_t len) {
-    //cout << "Compress level: " << level << endl;
+    //std::cout << "Compress level: " << level << std::endl;
     T* const keys = &data_[LEVEL_START[level]];
     std::sort(keys,  keys + len);
-    uniform_int_distribution<int32_t> dist(0, 1);
+    std::uniform_int_distribution<int32_t> dist(0, 1);
     for (int32_t i = dist(*rgen); i < len; i += 2) {
       keys[i / 2] = keys[i];
     }
@@ -141,13 +140,13 @@ struct SampledKll {
 
   template <typename Random>
   void ShuffleDown(Random* rgen) {
-    //cout << "ShuffleDown" << endl;
+    //std::cout << "ShuffleDown" << std::endl;
 
     using std::swap;
-    array<T, LEVEL_START[1] - LEVEL_START[0]> purgatory{};
+    std::array<T, LEVEL_START[1] - LEVEL_START[0]> purgatory{};
     int32_t purgatory_size = 0;
     if (!heavies_[0]) {
-      copy(&data_[LEVEL_START[0]], &data_[LEVEL_START[0] + level_sizes_[0]],
+      std::copy(&data_[LEVEL_START[0]], &data_[LEVEL_START[0] + level_sizes_[0]],
           &purgatory[0]);
       swap(purgatory_size, level_sizes_[0]);
     }
@@ -157,7 +156,7 @@ struct SampledKll {
       while (level_sizes_[level] > 0) {
         if (level_sizes_[level - 1] >= LEVEL_START[level] - LEVEL_START[level-1]) {
           Compress(rgen, level - 1, level_sizes_[level - 1]);
-          copy(&data_[LEVEL_START[level - 1]],
+          std::copy(&data_[LEVEL_START[level - 1]],
               &data_[LEVEL_START[level - 1] + level_sizes_[level - 1]],
               &data_[LEVEL_START[level + 1]
                   - (LEVEL_START[level] - LEVEL_START[level - 1]) / 2]);
@@ -170,7 +169,7 @@ struct SampledKll {
         --level_sizes_[level];
       }
       if (copied_up) {
-        copy(&data_[LEVEL_START[level + 1]
+        std::copy(&data_[LEVEL_START[level + 1]
                  - (LEVEL_START[level] - LEVEL_START[level - 1]) / 2],
             &data_[LEVEL_START[level + 1]], &data_[LEVEL_START[level]]);
         level_sizes_[level] = (LEVEL_START[level] - LEVEL_START[level - 1]) / 2;
@@ -186,20 +185,20 @@ struct SampledKll {
 
   void PrintMetaData() {
     return;
-    cout << sample_weight_ << " " << sample_height_;
+    std::cout << sample_weight_ << " " << sample_height_;
     for (int16_t i = 0; i < level_sizes_.size(); ++i) {
-      cout << " ";
-      if (heavies_[i]) cout << "H";
-      cout << setw(4 - heavies_[i]) << right << level_sizes_[i] << "/" << setw(4) << left
-           << LEVEL_START[i + 1] - LEVEL_START[i];
+      std::cout << " ";
+      if (heavies_[i]) std::cout << "H";
+      std::cout << std::setw(4 - heavies_[i]) << std::right << level_sizes_[i] << "/"
+           << std::setw(4) << std::left << LEVEL_START[i + 1] - LEVEL_START[i];
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 
   int64_t InferredSize() const {
     int64_t ans = sample_weight_;
     int64_t weight = (sample_height_ < 0) ? 1 : (1 << sample_height_);
-    for (int i = max(0, -sample_height_); i < level_sizes_.size(); ++i) {
+    for (int i = std::max(0, -sample_height_); i < level_sizes_.size(); ++i) {
       ans += level_sizes_[i] * weight;
       weight *= 2;
     }
@@ -214,7 +213,7 @@ struct SampledKll {
     while (destination >= 0
         && level_sizes_[destination]
             == LEVEL_START[destination + 1] - LEVEL_START[destination]) {
-      //cout << "key_height: " << key_height << endl;
+      //std::cout << "key_height: " << key_height << std::endl;
       PrintMetaData();
       Compress(rgen, destination, level_sizes_[destination]);
       PrintMetaData();
@@ -240,7 +239,7 @@ struct SampledKll {
     const int64_t limit_weight = 1ull << sample_height_;
     int64_t key_weight = 1ull << key_height;
     if (sample_weight_ + key_weight <= limit_weight) {
-      uniform_int_distribution<int64_t> dist(0, sample_weight_ + key_weight - 1);
+      std::uniform_int_distribution<int64_t> dist(0, sample_weight_ + key_weight - 1);
       if (dist(*rgen) < key_weight) {
         data_[0] = key;
       }
@@ -257,7 +256,7 @@ struct SampledKll {
       swap(sample_weight_, key_weight);
       swap(data_[0], mutable_key);
     }
-    uniform_int_distribution<int64_t> dist(0, limit_weight - 1);
+    std::uniform_int_distribution<int64_t> dist(0, limit_weight - 1);
     if (dist(*rgen) < key_weight) {
       Insert(rgen, mutable_key, sample_height_);
     }
