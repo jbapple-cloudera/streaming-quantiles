@@ -3,6 +3,8 @@
 #include "reservoir.hpp"
 #include "sampled-kll.hpp"
 
+using namespace std;
+
 int main(int argc, char ** argv) {
   assert (argc == 2);
   //InteractiveTest<UrandomBool, SampledKll<string, 1000>>(argv[1]);

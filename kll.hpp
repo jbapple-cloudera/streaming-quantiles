@@ -2,28 +2,21 @@
 
 #include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstdint>
 #include <deque>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <random>
-#include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
-using namespace std;
-
-#include "reservoir.hpp"
 #include "utility.hpp"
 
 template<typename T, uint32_t CAPACITY>
 struct Kll {
 private:
-  vector<vector<T>> data_;
-  deque<uint32_t> size_limits_;
+  std::vector<std::vector<T>> data_;
+  std::deque<uint32_t> size_limits_;
   uint64_t size_;
   static uint32_t Round(uint32_t x) { return 2 * (x / 2); }
 
@@ -38,10 +31,10 @@ private:
   void PrintMetaData() {
     return;
     for (const auto & level : data_) {
-      cout << " ";
-      cout << setw(4) << right << level.size();
+      std::cout << " ";
+      std::cout << std::setw(4) << std::right << level.size();
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 
   uint64_t InferredSize() const {
@@ -59,13 +52,13 @@ private:
     assert (size_limits_.size() == data_.size());
     ++size_;
     if (level >= data_.size()) {
-      data_.push_back(vector<T>());
+      data_.push_back(std::vector<T>());
       size_limits_.push_front(Round(size_limits_[0] * 2 / 3));
     }
     if (data_[level].size() >= size_limits_[level]) {
       PrintMetaData();
       if (data_[level].size() > 2) {
-        sort(data_[level].begin(), data_[level].end());
+        std::sort(data_[level].begin(), data_[level].end());
       }
       std::uniform_int_distribution<uint32_t> dist(0,1);
       for (uint32_t i = dist(*rgen); i < data_[level].size(); i += 2) {
@@ -76,23 +69,22 @@ private:
     data_[level].push_back(key);
   }
 
- private:
-  vector<pair<T, uint64_t>> Flatten() const {
-    vector<pair<T, uint64_t>> result;
-    uint64_t weight = 1;
+ public:
+  Cdf<T> GetCdf() const {
+    std::vector<std::pair<T, int64_t>> result;
+    int64_t weight = 1;
     for (const auto& d : data_) {
       weight *= 2;
-      for (const auto& v : d) {
-        result.push_back({v, weight});
-      }
+      for (const auto& v : d) result.push_back({v, weight});
     }
-    return result;
+    std::sort(result.begin(), result.end());
+    return Cdf<T>(result);
   }
 
  public:
-  T Percentile(double p) const {
-    return FindPercentile(Flatten(), p);
-  }
+  // T Percentile(double p) const {
+  //   return FindPercentile(Flatten(), p);
+  // }
 
   template <typename Random>
   void Merge(Random* rgen, const Kll& that) {

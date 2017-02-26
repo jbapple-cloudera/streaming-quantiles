@@ -90,28 +90,23 @@ struct SampledKll {
   std::bitset<LEVEL_START.size() - 1> heavies_ = 0;
   int16_t sample_height_ = 1 - level_sizes_.size();
 
- private:
-  std::vector<std::pair<T, uint64_t>> Flatten() const {
-    std::vector<std::pair<T, uint64_t>> result;
-    if (sample_weight_) result.push_back({data_[0], sample_weight_});
+ public:
+  Cdf<T> GetCdf() const {
+    std::vector<std::pair<T, double>> raw;
+    if (sample_weight_) raw.push_back({data_[0], sample_weight_});
     int64_t weight = 1ll << std::max(0, +sample_height_);
     for (int16_t level = std::max(0, -sample_height_); level < level_sizes_.size();
          ++level) {
       for (int32_t i = 0; i < level_sizes_[level]; ++i) {
-        result.push_back({data_[LEVEL_START[level] + i], weight});
+        raw.push_back({data_[LEVEL_START[level] + i], weight});
       }
       weight *= 2;
     }
-    return result;
+    std::sort(raw.begin(), raw.end());
+    return Cdf<T>(raw);
   }
 
- public:
-  T Percentile(double p) const {
-    const auto f = Flatten();
-    return FindPercentile(f, p);
-  }
-
-  // private:
+ private:
   template <typename Random>
   void Compress(Random* rgen, int16_t level, int32_t len) {
     // std::cout << "Compress level: " << level << std::endl;
@@ -170,7 +165,7 @@ struct SampledKll {
     }
   }
 
-  void PrintMetaData() {
+  void PrintMetaData() const {
     return;
     std::cout << sample_weight_ << " " << sample_height_;
     for (int16_t i = 0; i < level_sizes_.size(); ++i) {
@@ -182,15 +177,15 @@ struct SampledKll {
     std::cout << std::endl;
   }
 
-  int64_t InferredSize() const {
-    int64_t ans = sample_weight_;
-    int64_t weight = (sample_height_ < 0) ? 1 : (1 << sample_height_);
-    for (int i = std::max(0, -sample_height_); i < level_sizes_.size(); ++i) {
-      ans += level_sizes_[i] * weight;
-      weight *= 2;
-    }
-    return ans;
-  }
+  // int64_t InferredSize() const {
+  //   int64_t ans = sample_weight_;
+  //   int64_t weight = (sample_height_ < 0) ? 1 : (1 << sample_height_);
+  //   for (int i = std::max(0, -sample_height_); i < level_sizes_.size(); ++i) {
+  //     ans += level_sizes_[i] * weight;
+  //     weight *= 2;
+  //   }
+  //   return ans;
+  // }
 
  public:
   template <typename Random>

@@ -50,6 +50,40 @@ auto PrintTimer(const F& f) {
 }
 
 template<typename T>
+struct Cdf {
+ private:
+  std::vector<T> values_;
+  std::vector<double> percentiles_;
+
+ public:
+  template <typename C>
+  explicit Cdf(const C& raw) : values_(1, raw[0].first), percentiles_(1, raw[0].second) {
+    assert(std::is_sorted(raw.begin(), raw.end()));
+    for (int i = 1; i < raw.size(); ++i) {
+      if (raw[i].first == raw[i - 1].first) {
+        percentiles_.back() += raw[i].second;
+      } else {
+        values_.push_back(raw[i].first);
+        percentiles_.push_back(raw[i].second + percentiles_.back());
+      }
+    }
+    for (double& v : percentiles_) v = 100.0 * v / percentiles_.back();
+  }
+
+  const T& GetValue(double percentile) const {
+    auto i = std::lower_bound(percentiles_.begin(), percentiles_.end(), percentile);
+    if (i == percentiles_.end()) --i;
+    return values_[i - percentiles_.begin()];
+  }
+
+  double GetPercentile(const T& value) const {
+    auto i = std::lower_bound(values_.begin(), values_.end(), value);
+    if (i == values_.end()) --i;
+    return percentiles_[i - values_.begin()];
+  }
+};
+
+template<typename T>
 auto GroundTruth(const std::vector<T>& keys) {
   std::unordered_map<T, std::pair<double, double>> index;
   const double total = keys.size();
@@ -104,7 +138,7 @@ void InteractiveTest(const std::string& filename) {
   std::array<std::pair<double, double>, sizeof...(Sketches)> truths;
   while (std::cin >> p) {
     const std::array<std::string, sizeof...(Sketches)> results = {
-        std::get<Sketches>(sketches).Percentile(p / 100)...};
+        std::get<Sketches>(sketches).GetCdf().GetValue(p)...};
     std::transform(results.begin(), results.end(), truths.begin(),
         [&](const std::string& result) { return index.find(result)->second; });
     for (int i = 0; i < sizeof...(Sketches); ++i) {
@@ -137,7 +171,7 @@ std::string Middle(const std::string& filename) {
   std::string word;
   Random r;
   while (file >> word) sketch.Insert(&r, word, 0);
-  return sketch.Percentile(0.5);
+  return sketch.GetCdf().GetValue(50.0);
 }
 
 template <typename Random, typename Sketch>
@@ -145,9 +179,7 @@ std::string Middle(const std::vector<std::string>& keys) {
   Sketch sketch;
   Random r;
   for (const auto& key : keys) sketch.Insert(&r, key, 0);
-  const auto result = sketch.Percentile(0.5);
-  //std::cout << result << ' ';
-  return result;
+  return sketch.GetCdf().GetValue(50.0);
 }
 
 double Error(const std::pair<double,double>& range) {
@@ -202,23 +234,4 @@ void Quality(const std::string& filename) {
     }
   }
 
-}
-
-template <typename T>
-T FindPercentile(std::vector<std::pair<T, uint64_t>> keys, double p) {
-  assert(0 <= p && p <= 1);
-  sort(keys.begin(), keys.end());
-
-  double target = 0;
-  for (const auto& v : keys) target += v.second;
-  target *= p;
-
-  uint64_t seen = 0;
-  //std::cout << keys.size() << ' ' << p << std::endl;
-  for (const auto& v : keys) {
-    seen += v.second;
-    //std::cout << v.first << ' ' << v.second << std::endl;
-    if (seen >= target) return v.first;
-  }
-  __builtin_unreachable();
 }

@@ -2,6 +2,8 @@
 #include "utility.hpp"
 #include "kll.hpp"
 
+using namespace std;
+
 int main(int argc, char** argv) {
   SampledKll<string, 5> sketch;
   assert(argc == 2);
