@@ -1,5 +1,5 @@
 DEBUG_FLAGS = -O0 -ggdb3
-RELEASE_FLAGS = -O3 -DNDEBUG
+RELEASE_FLAGS = -O3 -DNDEBUG -ggdb3
 
 .PHONY: all
 CPPS = $(wildcard *.cpp)
