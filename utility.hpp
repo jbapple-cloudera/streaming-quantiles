@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <sstream>
 
 #ifndef __has_builtin
 #define __has_builtin(x) 0
@@ -27,6 +28,14 @@
 #if not __has_builtin(__builtin_unreachable)
 #define __builtin_unreachable()
 #endif
+
+template <typename T, typename U>
+T StringCast(const U& x) {
+  std::istringstream s(x);
+  T result;
+  s >> result;
+  return result;
+}
 
 template<typename Clock, typename F>
 auto PrintTimerWithClock(const F& f) {
