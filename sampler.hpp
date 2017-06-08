@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <random>
 #include <iostream>
+#include <fstream>
 
 namespace sampler {
 
@@ -60,49 +61,49 @@ struct exp {
   }
 };
 
-template <typename T>
-struct DoubleWordWrapper {
-  using Type = struct NoDoubleWordDefinedFor;
-};
+// template <typename T>
+// struct DoubleWordWrapper {
+//   using Type = struct NoDoubleWordDefinedFor;
+// };
 
-template <>
-struct DoubleWordWrapper<uint8_t> {
-  using Type = uint16_t;
-};
+// template <>
+// struct DoubleWordWrapper<uint8_t> {
+//   using Type = uint16_t;
+// };
 
-template <>
-struct DoubleWordWrapper<uint16_t> {
-  using Type = uint32_t;
-};
+// template <>
+// struct DoubleWordWrapper<uint16_t> {
+//   using Type = uint32_t;
+// };
 
-template <>
-struct DoubleWordWrapper<uint32_t> {
-  using Type = uint64_t;
-};
+// template <>
+// struct DoubleWordWrapper<uint32_t> {
+//   using Type = uint64_t;
+// };
 
-template <>
-struct DoubleWordWrapper<uint64_t> {
-  using Type = unsigned __int128;
-};
+// template <>
+// struct DoubleWordWrapper<uint64_t> {
+//   using Type = unsigned __int128;
+// };
 
-template <typename T>
-using DoubleWord = typename DoubleWordWrapper<T>::Type;
+// template <typename T>
+// using DoubleWord = typename DoubleWordWrapper<T>::Type;
 
-template <typename N>
-DoubleWord<N> MultiplyUp(N x, N y) {
-  return DoubleWord<N>(x) * DoubleWord<N>(y);
-}
+// template <typename N>
+// DoubleWord<N> MultiplyUp(N x, N y) {
+//   return DoubleWord<N>(x) * DoubleWord<N>(y);
+// }
 
-template <typename N>
-DoubleWord<N> AsHighBits(N x) {
-  constexpr DoubleWord<N> H = DoubleWord<N>(1) + std::numeric_limits<N>::max();
-  return DoubleWord<N>(x) * H;
-}
+// template <typename N>
+// DoubleWord<N> AsHighBits(N x) {
+//   constexpr DoubleWord<N> H = DoubleWord<N>(1) + std::numeric_limits<N>::max();
+//   return DoubleWord<N>(x) * H;
+// }
 
-template <typename N>
-DoubleWord<N> AddSmaller(DoubleWord<N> x, N y) {
-  return x + DoubleWord<N>(y);
-}
+// template <typename N>
+// DoubleWord<N> AddSmaller(DoubleWord<N> x, N y) {
+//   return x + DoubleWord<N>(y);
+// }
 
 template <typename N>
 struct Ratio {
@@ -112,58 +113,99 @@ struct Ratio {
 struct Order {
   enum Ordering { LT, GT, EQ };
 
-  template <typename N>
-  static Ordering Compare(N x, N y) {
-    if (x < y) return LT;
-    if (x > y) return GT;
-    return EQ;
-  }
+  // template <typename N>
+  // static Ordering Compare(N x, N y) {
+  //   if (x < y) return LT;
+  //   if (x > y) return GT;
+  //   return EQ;
+  // }
+
+  // template <typename N>
+  // static Ordering Compare(const std::vector<N>& r, const Ratio<N> p) {
+  //   N num = p.num;
+  //   //constexpr DoubleWord<N> H = DoubleWord<N>(1) + std::numeric_limits<N>::max();
+  //   for (const N v : r) {
+  //     const DoubleWord<N> lhs = MultiplyUp(v, p.den), rhs = AsHighBits(num);
+  //     switch (Compare(lhs, rhs)) {
+  //       case GT: return GT;
+  //       case EQ: num = 0; break;
+  //       case LT:
+  //         if (GT == Compare(AddSmaller(lhs, p.den), rhs)) num = rhs - lhs;
+  //         else return LT;
+  //     }
+  //   }
+  //   return num ? LT : EQ;
+  // }
 
   template <typename N>
-  static Ordering Compare(const std::vector<N>& r, const Ratio<N> p) {
+  static Ordering Compare(const std::vector<bool>& r, const Ratio<N> p) {
     N num = p.num;
-    //constexpr DoubleWord<N> H = DoubleWord<N>(1) + std::numeric_limits<N>::max();
-    for (const N v : r) {
-      const DoubleWord<N> lhs = MultiplyUp(v, p.den), rhs = AsHighBits(num);
-      switch (Compare(lhs, rhs)) {
-        case GT: return GT;
-        case EQ: num = 0; break;
-        case LT:
-          if (GT == Compare(AddSmaller(lhs, p.den), rhs)) num = rhs - lhs;
-          else return LT;
+    for (const bool v : r) {
+      if (v) {
+        if (2 * num < p.den) return GT;
+        num = 2 * num - p.den;
+      } else {
+        if (2 * num >= p.den) return LT;
+        num = 2 * num;
       }
     }
     return num ? LT : EQ;
   }
 };
 
-template <typename N>
-bool Increment(std::vector<N>* r) {
-  for (uint64_t i = r->size() - 1; i < r->size(); --i) {
-    ++(*r)[i];
-    if ((*r)[i]) return true;
+// template <typename N>
+// bool Increment(std::vector<N>* r) {
+//   for (uint64_t i = r->size() - 1; i < r->size(); --i) {
+//     ++(*r)[i];
+//     if ((*r)[i]) return true;
+//   }
+//   return false;
+// }
+
+// template <typename N>
+// bool Decrement(std::vector<N>* r) {
+//   for (uint64_t i = r->size() - 1; i < r->size(); --i) {
+//     --(*r)[i];
+//     if (N(~N((*r)[i]))) return true;
+//   }
+//   return false;
+// }
+
+bool Increment(std::vector<bool>& r) {
+  for (uint64_t i = r.size() - 1; i < r.size(); --i) {
+    r[i] = !r[i];
+    if (r[i]) return true;
   }
   return false;
 }
 
-template <typename N>
-bool Decrement(std::vector<N>* r) {
-  for (uint64_t i = r->size() - 1; i < r->size(); --i) {
-    --(*r)[i];
-    if (N(~N((*r)[i]))) return true;
+
+bool Decrement(std::vector<bool>& r) {
+  for (uint64_t i = r.size() - 1; i < r.size(); --i) {
+    r[i] = !r[i];
+    if (!r[i]) return true;
   }
   return false;
 }
 
-template <typename N>
-long double AsFloating(const std::vector<N>& r) {
-  constexpr long LOG2_BASE =
-      log2(static_cast<long double>(1.0) + std::numeric_limits<N>::max()) + 0.1;
+// template <typename N>
+// long double AsFloating(const std::vector<N>& r) {
+//   constexpr long LOG2_BASE =
+//       log2(static_cast<long double>(1.0) + std::numeric_limits<N>::max()) + 0.1;
+//   long double result = 0.0;
+//   for (auto i = r.size() - 1; i < r.size(); --i) {
+//     result += std::ldexp(r[i], (i + 1) * -LOG2_BASE);
+//   }
+//   return result;
+// }
+
+long double AsFloating(const std::vector<bool>& r) {
   long double result = 0.0;
   for (auto i = r.size() - 1; i < r.size(); --i) {
-    result += std::ldexp(r[i], (i + 1) * -LOG2_BASE);
+    result = result / 2;
+    result += r[i] ? 1 : 0;
   }
-  return result;
+  return result / 2;
 }
 
 template <typename N>
@@ -173,10 +215,31 @@ long double AsFloating(const Ratio<N>& r) {
 
 enum struct Direction { LHS, RHS };
 
+// template <typename CDF, Direction D, typename N>
+// N invert(const std::vector<N>& r, N count, N lo, N hi) {
+//   const auto cdf = [count](N s) { return CDF::F(count, s); };
+//   assert(Order::EQ == Order::Compare(std::vector<N>(), cdf(0)));
+//   assert(hi > lo);
+//   while (hi - lo > 1) {
+//     assert(Order::LT != Order::Compare(r, cdf(lo)));
+//     assert(Order::GT != Order::Compare(r, cdf(hi)));
+//     const N mid = lo + (hi - lo)/2;
+//     switch (Order::Compare(r, cdf(mid))) {
+//       case Order::LT: hi = mid; break;
+//       case Order::GT: lo = mid; break;
+//       case Order::EQ: if (D == Direction::LHS) lo = mid; else return mid;
+//     }
+//   }
+//   assert (hi - lo == 1);
+//   assert(Order::LT != Order::Compare(r, cdf(lo)));
+//   assert(Order::GT != Order::Compare(r, cdf(hi)));
+//   return hi;
+// }
+
 template <typename CDF, Direction D, typename N>
-N invert(const std::vector<N>& r, N count, N lo, N hi) {
+N Invert(const std::vector<bool>& r, N count, N lo, N hi) {
   const auto cdf = [count](N s) { return CDF::F(count, s); };
-  assert(Order::EQ == Order::Compare(std::vector<N>(), cdf(0)));
+  assert(Order::EQ == Order::Compare(std::vector<bool>(), cdf(0)));
   assert(hi > lo);
   while (hi - lo > 1) {
     assert(Order::LT != Order::Compare(r, cdf(lo)));
@@ -194,26 +257,52 @@ N invert(const std::vector<N>& r, N count, N lo, N hi) {
   return hi;
 }
 
+std::vector<std::pair<long double, uintmax_t>> samples;
+
 template <typename CDF, typename N, typename R>
-N sample(R* urng, N count, N hi = std::numeric_limits<N>::max()) {
-  N lo = 0;
-  thread_local std::uniform_int_distribution<N> rng;
+N Sample(R* urng, N count) {
+  N lo = 0, hi = std::numeric_limits<N>::max()/2;
+  thread_local std::bernoulli_distribution rng;
   // std::vector<N> previous;
-  for (std::vector<N> r(1, rng(*urng));; r.push_back(rng(*urng))) {
-    lo = invert<CDF, Direction::LHS>(r, count, lo, hi) - 1;
+  //std::cout << "A: ";
+  for (std::vector<bool> r(1, rng(*urng));; r.push_back(rng(*urng))) {
+    //    if (r.size() == 1) std::cout << (!r.back() ? '#' : '_');
+    // std::cout << (r.back() ? '#' : '_');
+    lo = Invert<CDF, Direction::LHS>(r, count, lo, hi) - 1;
     assert(lo + 1 != 0);
-    if (lo + 1 >= hi) return hi;
+    if (lo + 1 >= hi) {
+      //std::cout << std::endl;
+      //std::cout << "B: ";
+      for (const bool v : r) {
+        //std::cout << (v ? "#" : "_");
+      }
+      //std::cout << std::endl;
+      //std::cout << AsFloating(r) << std::endl;
+      samples.push_back(std::make_pair(AsFloating(r), hi));
+      return hi - 1;
+    }
     // previous = r;
-    if (!Increment(&r)) {
-      const bool d = Decrement(&r);
+    if (!Increment(r)) {
+      const bool d = Decrement(r);
       assert(!d);
       continue;
     }
-    hi = invert<CDF, Direction::RHS>(r, count, lo, hi);
+    hi = Invert<CDF, Direction::RHS>(r, count, lo, hi);
     assert(hi > lo);
-    if (hi - lo == 1) return hi - 1;
+    if (hi - lo == 1) {
+      //std::cout << std::endl;
+      //std::cout << "C: ";
+      for (const bool v : r) {
+        //std::cout << (v ? "#" : "_");
+      }
+      //std::cout << std::endl;
+      Decrement(r);
+      //std::cout << AsFloating(r) << std::endl;
+      samples.push_back(std::make_pair(AsFloating(r), hi));
+      return hi - 1;
+    }
     // previous = r;
-    const bool d = Decrement(&r);
+    const bool d = Decrement(r);
     assert(d);
   }
 }
@@ -236,6 +325,21 @@ struct PromptPrng {
   result_type operator()() const {
     std::uintmax_t result;
     std::cin >> result;
+    return result;
+  }
+};
+
+template <typename ResultType>
+struct DevUrandom {
+  using result_type = ResultType;
+  static constexpr result_type min() { return 0; }
+  static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
+  std::ifstream s;
+  explicit DevUrandom() : s("/dev/urandom", std::ios::binary) { assert(s.is_open()); }
+  result_type operator()() {
+    assert(s.is_open());
+    result_type result = 0;
+    s.read(reinterpret_cast<char*>(&result), sizeof(result));
     return result;
   }
 };
@@ -316,12 +420,12 @@ template <typename T>
 struct Vitter {
   // using Word = uint64_t; using DoubleWord = unsigned __int128;
   //using Word = uint8_t; //using DoubleWord = uint16_t;
-  using Word = uint8_t;
+  using Word = uint64_t;
   T payload;
   Word count, skip;
   template <typename G>
   explicit Vitter(const T& payload, G* g)
-    : payload(payload), count(1), skip(sample<VitterCDF<Word>>(g, count)) {}
+    : payload(payload), count(1), skip(Sample<VitterCDF<Word>>(g, count)) {}
   template <typename G>
   void next(const T& x, G* g) {
     ++count;
@@ -329,7 +433,7 @@ struct Vitter {
       --skip;
     } else {
       payload = x;
-      skip = sample<VitterCDF<Word>>(g, count);
+      skip = Sample<VitterCDF<Word>>(g, count);
     }
   }
 };
