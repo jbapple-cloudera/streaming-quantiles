@@ -40,7 +40,7 @@ int main() {
     //if (!(cin >> width)) break;
     //if (!(cin >> count)) break;
     width = 4;
-    count = 44'444'444;
+    count = 444'444;
     if (0) {
       auto result = Uniformity<sampler::simple<size_t>>(width, count);
       for (auto r : result) {

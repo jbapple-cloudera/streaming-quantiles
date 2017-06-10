@@ -135,7 +135,8 @@ N Invert(const std::vector<bool>& r, N count, N lo, N hi) {
 done:
   while (hi - lo > 1) {
     assert(Order::LT != Order::Compare(r, cdf(lo)));
-    assert(Order::GT != Order::Compare(r, cdf(hi)));
+    assert(hi + count == std::numeric_limits<N>::max()
+        || Order::GT != Order::Compare(r, cdf(hi)));
     const N mid = lo + (hi - lo)/2;
     switch (Order::Compare(r, cdf(mid))) {
       case Order::LT: hi = mid; break;
@@ -145,7 +146,8 @@ done:
   }
   assert (hi - lo == 1);
   assert(Order::LT != Order::Compare(r, cdf(lo)));
-  assert(Order::GT != Order::Compare(r, cdf(hi)));
+  assert(hi + count == std::numeric_limits<N>::max()
+      || Order::GT != Order::Compare(r, cdf(hi)));
   return hi;
 }
 
@@ -173,7 +175,7 @@ class OneBit {
 
 template <typename CDF, typename N, typename R>
 N Sample(R* urng, N count) {
-  N lo = 0, hi = std::numeric_limits<N>::max();
+  N lo = 0, hi = std::numeric_limits<N>::max() - count;
   //thread_local std::bernoulli_distribution rng;
   thread_local OneBit<uint64_t> rng;
   // std::vector<N> previous;
@@ -357,7 +359,7 @@ template <typename T>
 struct Vitter {
   // using Word = uint64_t; using DoubleWord = unsigned __int128;
   //using Word = uint8_t; //using DoubleWord = uint16_t;
-  using Word = uint64_t;
+  using Word = uint8_t;
   T payload;
   Word count, skip;
   template <typename G>
