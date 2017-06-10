@@ -123,6 +123,16 @@ N Invert(const std::vector<bool>& r, N count, N lo, N hi) {
   const auto cdf = [count](N s) { return CDF::F(count, s); };
   assert(Order::EQ == Order::Compare(std::vector<bool>(), cdf(0)));
   assert(hi > lo);
+  for (N incr = 1; (incr > 0) and (N(lo + incr) > lo) and (N(lo + incr) < hi);
+       incr = incr * 2) {
+    switch (Order::Compare(r, cdf(lo + incr))) {
+      case Order::LT: hi = lo + incr; goto done;
+      case Order::EQ: if (D == Direction::RHS) return lo + incr;
+                      lo = lo + incr; goto done;
+      case Order::GT: lo = lo + incr;
+    }
+  }
+done:
   while (hi - lo > 1) {
     assert(Order::LT != Order::Compare(r, cdf(lo)));
     assert(Order::GT != Order::Compare(r, cdf(hi)));
