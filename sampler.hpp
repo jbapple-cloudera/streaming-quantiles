@@ -74,10 +74,10 @@ struct Order {
     N num = p.num;
     for (const bool v : r) {
       if (v) {
-        if (2 * num < p.den) return GT;
+        if (num < p.den / 2 + (p.den & 1)) return GT;
         num = 2 * num - p.den;
       } else {
-        if (2 * num >= p.den) return LT;
+        if (num >= p.den / 2 + (p.den & 1)) return LT;
         num = 2 * num;
       }
     }
@@ -163,7 +163,7 @@ std::vector<std::pair<long double, uintmax_t>> samples;
 
 template <typename CDF, typename N, typename R>
 N Sample(R* urng, N count) {
-  N lo = 0, hi = std::numeric_limits<N>::max()/2;
+  N lo = 0, hi = std::numeric_limits<N>::max();
   thread_local std::bernoulli_distribution rng;
   // std::vector<N> previous;
   //std::cout << "A: ";
