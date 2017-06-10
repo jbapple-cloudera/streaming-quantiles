@@ -118,27 +118,6 @@ long double AsFloating(const Ratio<N>& r) {
 
 enum struct Direction { LHS, RHS };
 
-// template <typename CDF, Direction D, typename N>
-// N invert(const std::vector<N>& r, N count, N lo, N hi) {
-//   const auto cdf = [count](N s) { return CDF::F(count, s); };
-//   assert(Order::EQ == Order::Compare(std::vector<N>(), cdf(0)));
-//   assert(hi > lo);
-//   while (hi - lo > 1) {
-//     assert(Order::LT != Order::Compare(r, cdf(lo)));
-//     assert(Order::GT != Order::Compare(r, cdf(hi)));
-//     const N mid = lo + (hi - lo)/2;
-//     switch (Order::Compare(r, cdf(mid))) {
-//       case Order::LT: hi = mid; break;
-//       case Order::GT: lo = mid; break;
-//       case Order::EQ: if (D == Direction::LHS) lo = mid; else return mid;
-//     }
-//   }
-//   assert (hi - lo == 1);
-//   assert(Order::LT != Order::Compare(r, cdf(lo)));
-//   assert(Order::GT != Order::Compare(r, cdf(hi)));
-//   return hi;
-// }
-
 template <typename CDF, Direction D, typename N>
 N Invert(const std::vector<bool>& r, N count, N lo, N hi) {
   const auto cdf = [count](N s) { return CDF::F(count, s); };
