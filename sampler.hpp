@@ -177,20 +177,20 @@ N Sample(R* urng, N count) {
   //thread_local std::bernoulli_distribution rng;
   thread_local OneBit<uint64_t> rng;
   // std::vector<N> previous;
-  //std::cout << "A: ";
+  // std::cout << "A: ";
   for (std::vector<bool> r(1, rng(*urng));; r.push_back(rng(*urng))) {
     //    if (r.size() == 1) std::cout << (!r.back() ? '#' : '_');
     // std::cout << (r.back() ? '#' : '_');
     lo = Invert<CDF, Direction::LHS>(r, count, lo, hi) - 1;
     assert(lo + 1 != 0);
     if (lo + 1 >= hi) {
-      //std::cout << std::endl;
-      //std::cout << "B: ";
+      // std::cout << std::endl;
+      // std::cout << "B: ";
       for (const bool v : r) {
-        //std::cout << (v ? "#" : "_");
+        // std::cout << (v ? "#" : "_");
       }
-      //std::cout << std::endl;
-      //std::cout << AsFloating(r) << std::endl;
+      // std::cout << std::endl;
+      // std::cout << AsFloating(r) << std::endl;
       samples.push_back(std::make_pair(AsFloating(r), hi));
       return hi - 1;
     }
@@ -203,14 +203,14 @@ N Sample(R* urng, N count) {
     hi = Invert<CDF, Direction::RHS>(r, count, lo, hi);
     assert(hi > lo);
     if (hi - lo == 1) {
-      //std::cout << std::endl;
-      //std::cout << "C: ";
+      // std::cout << std::endl;
+      // std::cout << "C: ";
       for (const bool v : r) {
-        //std::cout << (v ? "#" : "_");
+        // std::cout << (v ? "#" : "_");
       }
-      //std::cout << std::endl;
+      // std::cout << std::endl;
       Decrement(r);
-      //std::cout << AsFloating(r) << std::endl;
+      // std::cout << AsFloating(r) << std::endl;
       samples.push_back(std::make_pair(AsFloating(r), hi));
       return hi - 1;
     }

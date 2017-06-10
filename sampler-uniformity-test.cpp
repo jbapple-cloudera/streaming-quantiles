@@ -11,7 +11,8 @@ template<typename Sampler>
 std::vector<size_t> Uniformity(size_t width, size_t count) {
   std::random_device randgen;
   //sampler::PromptPrng<uint8_t> randgen;
-  //sampler::DevUrandom<uint8_t> randgen;
+  //sampler::DevUrandom<uint64_t> randgen;
+  //sampler::DevUrandomBuffer<uint64_t> randgen(1 << 10);
   std::vector<size_t> result(width, 0);
   for (int i = 0; i < count; ++i) {
     //sampler::ExplodingPrng<uint8_t> randgen(i);
@@ -25,8 +26,9 @@ std::vector<size_t> Uniformity(size_t width, size_t count) {
       ++result[sampler.payload];
     } catch (...) {}
   }
-  sort(sampler::samples.begin(), sampler::samples.end());
-  //for (auto s : sampler::samples) cout << "(" << s.first << ", " << s.second << ") ";
+  //sort(sampler::samples.begin(), sampler::samples.end());
+  // for (auto s : sampler::samples) cout << "(" << s.first << ", " << s.second << ") ";
+  sampler::samples.clear();
   cout << endl;
   return result;
 }
@@ -37,18 +39,29 @@ int main() {
     //cout << "> ";
     //if (!(cin >> width)) break;
     //if (!(cin >> count)) break;
-    width = 40;
-    count = 400000;
-    auto result = Uniformity<sampler::Vitter<size_t>>(width, count);
+    width = 4;
+    count = 44'444'444;
+    if (0) {
+      auto result = Uniformity<sampler::simple<size_t>>(width, count);
+      for (auto r : result) {
+        cout << r << " ";
+      }
+      cout << endl;
+      return 0;
+    }
+    if (1) {
+      auto result = Uniformity<sampler::Vitter<size_t>>(width, count);
+      for (auto r : result) {
+        cout << r << " ";
+      }
+      cout << endl;
+      return 0;
+    }
+    auto result = Uniformity<sampler::exp<size_t>>(width, count);
     for (auto r : result) {
       cout << r << " ";
     }
     cout << endl;
     return 0;
-    result = Uniformity<sampler::exp<size_t>>(width, count);
-    for (auto r : result) {
-      cout << r << " ";
-    }
-    cout << endl;
   }
 }
