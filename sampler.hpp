@@ -61,50 +61,6 @@ struct exp {
   }
 };
 
-// template <typename T>
-// struct DoubleWordWrapper {
-//   using Type = struct NoDoubleWordDefinedFor;
-// };
-
-// template <>
-// struct DoubleWordWrapper<uint8_t> {
-//   using Type = uint16_t;
-// };
-
-// template <>
-// struct DoubleWordWrapper<uint16_t> {
-//   using Type = uint32_t;
-// };
-
-// template <>
-// struct DoubleWordWrapper<uint32_t> {
-//   using Type = uint64_t;
-// };
-
-// template <>
-// struct DoubleWordWrapper<uint64_t> {
-//   using Type = unsigned __int128;
-// };
-
-// template <typename T>
-// using DoubleWord = typename DoubleWordWrapper<T>::Type;
-
-// template <typename N>
-// DoubleWord<N> MultiplyUp(N x, N y) {
-//   return DoubleWord<N>(x) * DoubleWord<N>(y);
-// }
-
-// template <typename N>
-// DoubleWord<N> AsHighBits(N x) {
-//   constexpr DoubleWord<N> H = DoubleWord<N>(1) + std::numeric_limits<N>::max();
-//   return DoubleWord<N>(x) * H;
-// }
-
-// template <typename N>
-// DoubleWord<N> AddSmaller(DoubleWord<N> x, N y) {
-//   return x + DoubleWord<N>(y);
-// }
-
 template <typename N>
 struct Ratio {
   N num = 0, den = 1;
@@ -112,30 +68,6 @@ struct Ratio {
 
 struct Order {
   enum Ordering { LT, GT, EQ };
-
-  // template <typename N>
-  // static Ordering Compare(N x, N y) {
-  //   if (x < y) return LT;
-  //   if (x > y) return GT;
-  //   return EQ;
-  // }
-
-  // template <typename N>
-  // static Ordering Compare(const std::vector<N>& r, const Ratio<N> p) {
-  //   N num = p.num;
-  //   //constexpr DoubleWord<N> H = DoubleWord<N>(1) + std::numeric_limits<N>::max();
-  //   for (const N v : r) {
-  //     const DoubleWord<N> lhs = MultiplyUp(v, p.den), rhs = AsHighBits(num);
-  //     switch (Compare(lhs, rhs)) {
-  //       case GT: return GT;
-  //       case EQ: num = 0; break;
-  //       case LT:
-  //         if (GT == Compare(AddSmaller(lhs, p.den), rhs)) num = rhs - lhs;
-  //         else return LT;
-  //     }
-  //   }
-  //   return num ? LT : EQ;
-  // }
 
   template <typename N>
   static Ordering Compare(const std::vector<bool>& r, const Ratio<N> p) {
@@ -153,24 +85,6 @@ struct Order {
   }
 };
 
-// template <typename N>
-// bool Increment(std::vector<N>* r) {
-//   for (uint64_t i = r->size() - 1; i < r->size(); --i) {
-//     ++(*r)[i];
-//     if ((*r)[i]) return true;
-//   }
-//   return false;
-// }
-
-// template <typename N>
-// bool Decrement(std::vector<N>* r) {
-//   for (uint64_t i = r->size() - 1; i < r->size(); --i) {
-//     --(*r)[i];
-//     if (N(~N((*r)[i]))) return true;
-//   }
-//   return false;
-// }
-
 bool Increment(std::vector<bool>& r) {
   for (uint64_t i = r.size() - 1; i < r.size(); --i) {
     r[i] = !r[i];
@@ -179,7 +93,6 @@ bool Increment(std::vector<bool>& r) {
   return false;
 }
 
-
 bool Decrement(std::vector<bool>& r) {
   for (uint64_t i = r.size() - 1; i < r.size(); --i) {
     r[i] = !r[i];
@@ -187,17 +100,6 @@ bool Decrement(std::vector<bool>& r) {
   }
   return false;
 }
-
-// template <typename N>
-// long double AsFloating(const std::vector<N>& r) {
-//   constexpr long LOG2_BASE =
-//       log2(static_cast<long double>(1.0) + std::numeric_limits<N>::max()) + 0.1;
-//   long double result = 0.0;
-//   for (auto i = r.size() - 1; i < r.size(); --i) {
-//     result += std::ldexp(r[i], (i + 1) * -LOG2_BASE);
-//   }
-//   return result;
-// }
 
 long double AsFloating(const std::vector<bool>& r) {
   long double result = 0.0;
