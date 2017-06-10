@@ -258,6 +258,30 @@ struct DevUrandom {
 };
 
 template <typename ResultType>
+struct DevUrandomBuffer {
+  using result_type = ResultType;
+  static constexpr result_type min() { return 0; }
+  static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
+  std::ifstream s;
+  size_t buf_len = 0;
+  std::vector<result_type> buffer;
+  explicit DevUrandomBuffer(size_t size)
+    : s("/dev/urandom", std::ios::binary), buffer(size) {
+    assert(s.is_open());
+    s.read(reinterpret_cast<char *>(buffer.data()), sizeof(result_type) * buffer.size());
+    buf_len = buffer.size();
+  }
+  result_type operator()() {
+    if (buf_len == 0) {
+      s.read(reinterpret_cast<char*>(buffer.data()), sizeof(result_type) * buffer.size());
+      buf_len = buffer.size();
+    }
+    --buf_len;
+    return buffer[buf_len];
+  }
+};
+
+template <typename ResultType>
 struct ExplodingPrng {
   using result_type = ResultType;
   result_type r;
