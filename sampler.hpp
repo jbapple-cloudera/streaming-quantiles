@@ -151,10 +151,31 @@ done:
 
 std::vector<std::pair<long double, uintmax_t>> samples;
 
+template <typename U>
+class OneBit {
+ protected:
+  U buffer = 0;
+  U buffer_size = 0;
+
+ public:
+  template <typename G>
+  bool operator()(G& g) {
+    if (0 == buffer_size) {
+      buffer = g();
+      buffer_size = std::min(sizeof(buffer), sizeof(g()));
+    }
+    const bool result = 1 == (buffer % 2);
+    buffer = buffer / 2;
+    --buffer_size;
+    return result;
+  }
+};
+
 template <typename CDF, typename N, typename R>
 N Sample(R* urng, N count) {
   N lo = 0, hi = std::numeric_limits<N>::max();
-  thread_local std::bernoulli_distribution rng;
+  //thread_local std::bernoulli_distribution rng;
+  thread_local OneBit<uint64_t> rng;
   // std::vector<N> previous;
   //std::cout << "A: ";
   for (std::vector<bool> r(1, rng(*urng));; r.push_back(rng(*urng))) {
