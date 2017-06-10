@@ -71,6 +71,7 @@ struct Order {
 
   template <typename N>
   static Ordering Compare(const std::vector<bool>& r, const Ratio<N> p) {
+    // TODO: use type larger than bool for faster Compare
     N num = p.num;
     for (const bool v : r) {
       if (v) {
@@ -210,7 +211,7 @@ N Sample(R* urng, N count) {
 }
 
 // TODO: rationals have limited precision based on CDF - difference between consecutive
-// values?
+// values? This limits the size of the vector, which can be stack-allocated.
 
 template <typename N>
 struct VitterCDF {
