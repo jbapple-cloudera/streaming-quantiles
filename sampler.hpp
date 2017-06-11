@@ -8,56 +8,64 @@
 #include <iostream>
 #include <fstream>
 
+namespace std {
+template <>
+class is_integral<unsigned __int128> {
+ public:
+  static constexpr bool value = true;
+};
+}
+
 namespace sampler {
 
 // The simplest reservoir sampling
-template <typename T>
-struct simple {
-  T payload;
-  ::std::uint64_t count;
-  template <typename G>
-  simple(const T& payload, G*) : payload(payload), count(1) {}
-  template <typename G>
-  void next(const T& x, G* g) {
-    auto u = ::std::uniform_int_distribution<uint64_t>(0, count);
+template <typename N>
+class Simple {
+  N count = 0;
+
+ public:
+  static constexpr auto NAME() { return "sampler::Simple"; }
+
+  // Returns true if an item is kept at this step
+  template <typename Urng>
+  bool Step(Urng* urng) {
+    // TODO: libstdc++'s uniform_int_distribution throws away bits. Make this a member
+    // variable and keep leftover data to use in next call.
+    auto dist = ::std::uniform_int_distribution<N>(0, count);
     ++count;
-    if (0 == u(*g)) payload = x;
+    return 0 == dist(*urng);
   }
 };
 
 // Faster sampling using "Reservoir-sampling algorithms of time complexity
 // O(n(1+log(N/n)))" by Kim-Hung Li.
-//
-// TODO: make work for FP == __float128
-template <typename T, typename FP = long double>
-struct exp {
-  T payload;
-  FP w;
-  ::std::uint64_t s;
-  template <typename G>
-  static FP UniformUpTo(FP f, G* g) {
-    return ::std::uniform_real_distribution<FP>(
-        ::std::nextafter(static_cast<FP>(0.0), static_cast<FP>(1.0)),
-        ::std::nextafter(f, static_cast<FP>(0.0)))(*g);
+template <typename N>
+class Li {
+  // TODO: make work for __float128
+  long double lowest_hash = 1.0;
+  N skip = 0;
+  template <typename Urng>
+  static long double UniformUpTo(long double f, Urng* urng) {
+    return std::uniform_real_distribution<long double>(
+        std::nextafter(0.0L, 1.0L), std::nextafter(f, 0.0L))(*urng);
   }
-  template <typename G>
-  static ::std::uint64_t Countdown(FP f, G* g) {
-    thread_local ::std::exponential_distribution<FP> expo;
-    return ::std::floor(-expo(*g) / ::std::log(static_cast<FP>(1.0) - f));
+  template <typename Urng>
+  static N Countdown(long double f, Urng* urng) {
+    thread_local std::exponential_distribution<long double> expo;
+    return std::floor(-expo(*urng) / std::log(1.0L - f));
   }
-  template <typename G>
-  exp(const T& payload, G* g)
-    : payload(payload), w(UniformUpTo(1.0, g)), s(Countdown(w, g)) {}
-  template <typename G>
-  void next(const T& x, G* g) {
-    if (s) {
-      --s;
-    } else {
-      payload = x;
-      w = UniformUpTo(w, g);
-      s = Countdown(w, g);
-      //::std::cout << w << '\t' << s << ::std::endl;
+
+ public:
+  static constexpr auto NAME() { return "sampler::Li    "; }
+  template <typename Urng>
+  bool Step(Urng* g) {
+    if (skip) {
+      --skip;
+      return false;
     }
+    lowest_hash = UniformUpTo(lowest_hash, g);
+    skip = Countdown(lowest_hash, g);
+    return true;
   }
 };
 
@@ -151,8 +159,6 @@ done:
   return hi;
 }
 
-// std::vector<std::pair<long double, uintmax_t>> samples;
-
 template <typename U>
 class OneBit {
  protected:
@@ -222,9 +228,6 @@ N Sample(R* urng, N count) {
     assert(d);
   }
 }
-
-// TODO: rationals have limited precision based on CDF - difference between consecutive
-// values? This limits the size of the vector, which can be stack-allocated.
 
 template <typename N>
 struct VitterCDF {
@@ -302,26 +305,21 @@ struct ExplodingPrng {
   }
 };
 
-template <typename T>
-struct Vitter {
-  // using Word = uint64_t; using DoubleWord = unsigned __int128;
-  //using Word = uint8_t; //using DoubleWord = uint16_t;
-  // using Word = uint8_t;
-  using Word = unsigned __int128;
-  T payload;
-  Word count, skip;
+template <typename N>
+class Vitter {
+  N count = 0, skip = 0;
+
+ public:
+  static constexpr auto NAME() { return "sampler::Vitter"; }
   template <typename G>
-  explicit Vitter(const T& payload, G* g)
-    : payload(payload), count(1), skip(Sample<VitterCDF<Word>>(g, count)) {}
-  template <typename G>
-  void next(const T& x, G* g) {
+  bool Step(G* g) {
     ++count;
     if (skip) {
       --skip;
-    } else {
-      payload = x;
-      skip = Sample<VitterCDF<Word>>(g, count);
+      return false;
     }
+    skip = Sample<VitterCDF<N>>(g, count);
+    return true;
   }
 };
 }
