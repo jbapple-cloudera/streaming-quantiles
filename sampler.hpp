@@ -175,6 +175,7 @@ class OneBit {
 
 template <typename CDF, typename N, typename R>
 N Sample(R* urng, N count) {
+  if (0 == count) return 0;
   N lo = 0, hi = std::numeric_limits<N>::max() - count;
   //thread_local std::bernoulli_distribution rng;
   thread_local OneBit<uint64_t> rng;
