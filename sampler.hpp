@@ -302,61 +302,6 @@ struct ExplodingPrng {
   }
 };
 
-// template <typename Word, typename G>
-// struct LazyRand {
-//   explicit LazyRand(G* g) :
-//       randgen(g), payload(), uniform() {}
-//       G* randgen;
-//       std::vector<Word> payload;
-//       std::uniform_int_distribution<Word> uniform;
-//       Word operator[](size_t n) {
-//         if (n < payload.size()) return payload[n];
-//         assert(n == payload.size());
-//         payload.push_back(uniform(*randgen));
-//         return payload.back();
-//   }
-// };
-
-// template <typename DoubleWord, typename Word, typename G>
-// bool Less(LazyRand<Word, G>& r, Word num, Word den) {
-//   for (size_t i = 0; true; ++i) {
-//     if (0 == num) return false;
-//     const DoubleWord rbits = r[i];
-//     const DoubleWord rden = rbits * static_cast<DoubleWord>(den);
-//     const DoubleWord bignum = static_cast<DoubleWord>(num)
-//         << std::numeric_limits<Word>::digits;
-//     if (rden < bignum) return true;
-//     if (rden > bignum) return false;
-//     num = bignum % static_cast<DoubleWord>(den);
-//   }
-// }
-
-// template <typename DoubleWord, typename Word, typename G>
-// Word FindSkip(LazyRand<Word, G>& r, Word count) {
-//   const DoubleWord bigr = r[0], bigcount = count;
-//   constexpr DoubleWord MAX_WORD = static_cast<Word>(~static_cast<Word>(0));
-//   const DoubleWord negr = MAX_WORD + 1 - bigr;
-//   DoubleWord lo = (bigr * bigcount) / negr;
-//   // if (lo > 0) --lo;
-//   DoubleWord hi = MAX_WORD - bigcount;
-//   if (negr - 1 > 0) {
-//     //hi = std::min(hi, static_cast<DoubleWord>((bigcount * (bigr + 1)) / (negr - 1)));
-//   }
-//   //if (lo > hi) return hi - 1;
-//   Word down = lo, up = hi;
-//   down = 0;
-//   while (up - down > 1) {
-//     // std::cout << std::hex << "(" << static_cast<std::uintmax_t>(down) << ", "
-//     //           << static_cast<std::uintmax_t>(up) << ") = " << std::dec
-//     //           << static_cast<std::uintmax_t>(up - down) << std::endl;
-//     const Word mid = down + (up - down) / 2;
-//     //    if (Less<DoubleWord, Word>(r, mid +1, mid + count + 1)) up = mid;
-//     if (Less<DoubleWord, Word>(r, mid, mid + count)) up = mid;
-//     else down = mid;
-//   }
-//   return down;
-// }
-
 template <typename T>
 struct Vitter {
   // using Word = uint64_t; using DoubleWord = unsigned __int128;
