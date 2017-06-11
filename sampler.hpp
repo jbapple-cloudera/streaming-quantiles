@@ -151,7 +151,7 @@ done:
   return hi;
 }
 
-std::vector<std::pair<long double, uintmax_t>> samples;
+// std::vector<std::pair<long double, uintmax_t>> samples;
 
 template <typename U>
 class OneBit {
@@ -193,7 +193,7 @@ N Sample(R* urng, N count) {
       }
       // std::cout << std::endl;
       // std::cout << AsFloating(r) << std::endl;
-      samples.push_back(std::make_pair(AsFloating(r), hi));
+      // samples.push_back(std::make_pair(AsFloating(r), hi));
       return hi - 1;
     }
     // previous = r;
@@ -213,7 +213,7 @@ N Sample(R* urng, N count) {
       // std::cout << std::endl;
       Decrement(r);
       // std::cout << AsFloating(r) << std::endl;
-      samples.push_back(std::make_pair(AsFloating(r), hi));
+      // samples.push_back(std::make_pair(AsFloating(r), hi));
       return hi - 1;
     }
     // previous = r;
@@ -275,6 +275,7 @@ struct DevUrandomBuffer {
   }
   result_type operator()() {
     if (buf_len == 0) {
+      assert(s.is_open());
       s.read(reinterpret_cast<char*>(buffer.data()), sizeof(result_type) * buffer.size());
       buf_len = buffer.size();
     }
@@ -359,7 +360,8 @@ template <typename T>
 struct Vitter {
   // using Word = uint64_t; using DoubleWord = unsigned __int128;
   //using Word = uint8_t; //using DoubleWord = uint16_t;
-  using Word = uint8_t;
+  // using Word = uint8_t;
+  using Word = unsigned __int128;
   T payload;
   Word count, skip;
   template <typename G>
