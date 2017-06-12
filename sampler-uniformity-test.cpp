@@ -11,13 +11,9 @@ using namespace sampler;
 
 template <template<typename N> typename Sampler>
 void Uniformity(size_t width, size_t count) {
-  //std::random_device randgen;
-  //sampler::PromptPrng<uint8_t> randgen;
-  DevUrandom<uint64_t> randgen;
-  //sampler::DevUrandomBuffer<uint64_t> randgen(1 << 10);
-
+  // DevUrandom<uint64_t> randgen;
+  random_device randgen;
   vector<size_t> result(width, 0);
-
   for (size_t i = 0; i < count; ++i) {
     Sampler<unsigned __int128> sampler;
     size_t payload = width;
@@ -25,25 +21,22 @@ void Uniformity(size_t width, size_t count) {
       if (sampler.Step(&randgen)) payload = j;
     }
     ++result.at(payload);
-    if (i % 2'000'000 == 0) {
-      //cout << i << ' ';
-      cout << decltype(sampler)::NAME() << ' ';
+    if (i % 1'000'000 == 0) {
+      cout << decltype(sampler)::NAME() << ' ' << right << setw(4) << i / 1'000'000
+           << ' ';
+      long double max_quality = 0.0;
       for (auto r : result) {
-        cout << left << setw(8) << -log2(std::abs((r / (long double)i) - (1.0 / width)))
-             << " ";
+        max_quality = std::max(max_quality, -log2(std::abs((r / (long double)i) - (1.0 / width))));
       }
-      for (auto r : result) {
-        cout << left << setw(8) << 100 * r / (long double)i << " ";
-      }
-      cout << endl;
+      cout << left << setw(8) << max_quality << " " << endl;
     }
   }
 }
 
 
 int main() {
-  constexpr size_t width = 2, count = numeric_limits<size_t>::max();
-  //auto f1 = async(launch::async, Uniformity<Li>, width, count);
+  constexpr size_t width = 96, count = numeric_limits<size_t>::max();
+  auto f1 = async(launch::async, Uniformity<Li>, width, count);
   auto f2 = async(launch::async, Uniformity<Simple>, width, count);
   auto f3 = async(launch::async, Uniformity<Vitter>, width, count);
 }

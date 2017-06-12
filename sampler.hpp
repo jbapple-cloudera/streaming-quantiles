@@ -110,20 +110,6 @@ bool Decrement(std::vector<bool>& r) {
   return false;
 }
 
-long double AsFloating(const std::vector<bool>& r) {
-  long double result = 0.0;
-  for (auto i = r.size() - 1; i < r.size(); --i) {
-    result = result / 2;
-    result += r[i] ? 1 : 0;
-  }
-  return result / 2;
-}
-
-template <typename N>
-long double AsFloating(const Ratio<N>& r) {
-  return static_cast<long double>(r.num) / r.den;
-}
-
 enum struct Direction { LHS, RHS };
 
 template <typename CDF, Direction D, typename N>
@@ -183,27 +169,11 @@ template <typename CDF, typename N, typename R>
 N Sample(R* urng, N count) {
   if (0 == count) return 0;
   N lo = 0, hi = std::numeric_limits<N>::max() - count;
-  //thread_local std::bernoulli_distribution rng;
-  thread_local OneBit<uint64_t> rng;
-  // std::vector<N> previous;
-  // std::cout << "A: ";
+  thread_local OneBit<typename R::result_type> rng;
   for (std::vector<bool> r(1, rng(*urng));; r.push_back(rng(*urng))) {
-    //    if (r.size() == 1) std::cout << (!r.back() ? '#' : '_');
-    // std::cout << (r.back() ? '#' : '_');
     lo = Invert<CDF, Direction::LHS>(r, count, lo, hi) - 1;
     assert(lo + 1 != 0);
-    if (lo + 1 >= hi) {
-      // std::cout << std::endl;
-      // std::cout << "B: ";
-      for (const bool v : r) {
-        // std::cout << (v ? "#" : "_");
-      }
-      // std::cout << std::endl;
-      // std::cout << AsFloating(r) << std::endl;
-      // samples.push_back(std::make_pair(AsFloating(r), hi));
-      return hi - 1;
-    }
-    // previous = r;
+    if (lo + 1 >= hi) return hi - 1;
     if (!Increment(r)) {
       const bool d = Decrement(r);
       assert(!d);
@@ -211,19 +181,7 @@ N Sample(R* urng, N count) {
     }
     hi = Invert<CDF, Direction::RHS>(r, count, lo, hi);
     assert(hi > lo);
-    if (hi - lo == 1) {
-      // std::cout << std::endl;
-      // std::cout << "C: ";
-      for (const bool v : r) {
-        // std::cout << (v ? "#" : "_");
-      }
-      // std::cout << std::endl;
-      Decrement(r);
-      // std::cout << AsFloating(r) << std::endl;
-      // samples.push_back(std::make_pair(AsFloating(r), hi));
-      return hi - 1;
-    }
-    // previous = r;
+    if (hi - lo == 1) return hi - 1;
     const bool d = Decrement(r);
     assert(d);
   }
@@ -233,6 +191,39 @@ template <typename N>
 struct VitterCDF {
   static Ratio<N> F(N count, N s) { return {s, N(s + count)}; }
 };
+
+template <typename N>
+class Vitter {
+  N count = 0, skip = 0;
+
+ public:
+  static constexpr auto NAME() { return "sampler::Vitter"; }
+  template <typename G>
+  bool Step(G* g) {
+    ++count;
+    if (skip) {
+      --skip;
+      return false;
+    }
+    skip = Sample<VitterCDF<N>>(g, count);
+    return true;
+  }
+};
+
+long double AsFloating(const std::vector<bool>& r) {
+  long double result = 0.0;
+  for (auto i = r.size() - 1; i < r.size(); --i) {
+    result = result / 2;
+    result += r[i] ? 1 : 0;
+  }
+  return result / 2;
+}
+
+template <typename N>
+long double AsFloating(const Ratio<N>& r) {
+  return static_cast<long double>(r.num) / r.den;
+}
+
 
 template <typename ResultType>
 struct PromptPrng {
@@ -302,24 +293,6 @@ struct ExplodingPrng {
     if (0 == count) throw r;
     --count;
     return r;
-  }
-};
-
-template <typename N>
-class Vitter {
-  N count = 0, skip = 0;
-
- public:
-  static constexpr auto NAME() { return "sampler::Vitter"; }
-  template <typename G>
-  bool Step(G* g) {
-    ++count;
-    if (skip) {
-      --skip;
-      return false;
-    }
-    skip = Sample<VitterCDF<N>>(g, count);
-    return true;
   }
 };
 }
