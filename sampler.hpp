@@ -84,7 +84,7 @@ struct Order {
     for (const bool v : r) {
       if (v) {
         if (num < p.den / 2 + (p.den & 1)) return GT;
-        num = 2 * num - p.den;
+        num = num - (p.den - num);
       } else {
         if (num >= p.den / 2 + (p.den & 1)) return LT;
         num = 2 * num;
